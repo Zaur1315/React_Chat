@@ -15,6 +15,19 @@ const io = new Server(server, {
         origin: "*",
         methods: ["GET", "POST"]
     }
+});
+
+io.on('connection', (socket)=>{
+    socket.on('join', ({name, room})=>{
+        socket.join(room)
+
+        socket.emit('message', {
+            data: { user: {name: 'Admin'}, message: `Hey my friend ${name}` }
+        });
+    })
+
+
+    io.on('disconnetcion',()=>console.log('Disconnect'))
 })
 
 server.listen(5000, () =>{
