@@ -1,6 +1,6 @@
 import React from 'react'
 import { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Messages from './Messages';
 import io from 'socket.io-client'
 import styles from '../styles/Chat.module.css'
@@ -12,13 +12,14 @@ const socket = io.connect('http://localhost:5000/')
 
 
 const Chat = () => {
-  
-    const {search} = useLocation()  
-    const [params, setParams] = useState({room:'', user: ''})
+    const navigate = useNavigate()
+    const {search} = useLocation();
+    const [params, setParams] = useState({room:'', user: ''});
     const [state, setState] = useState([]);
     const [message, setMessage] = useState('');
-    const [isOpen, setOpen] = useState(false)
-    
+    const [isOpen, setOpen] = useState(false);
+    const [users, setUsers] = useState(0);
+
     useEffect(() => {
         const searchParams = Object.fromEntries(new URLSearchParams(search))
         setParams(searchParams);
@@ -27,13 +28,22 @@ const Chat = () => {
 
     useEffect(()=>{
         socket.on('message', ({data})=>{
-            setState((_state)=>([..._state, data]))})
-
+            setState((_state)=>[..._state, data]);
+        })
+    }, []); 
+    
+    useEffect(()=>{
+        socket.on('joinRoom', ({data: {users}})=>{
+            setUsers(users.length);
+        })
     }, []);
 
     const handleChange = ({target: {value}}) => setMessage(value)
 
-    const leftRoom = () =>{}
+    const leftRoom = () =>{
+        socket.emit('leftRoom', {params});
+        navigate('/');
+    }
 
     const onEmojiClick = ({ emoji }) => setMessage(`${message} ${emoji}`);
 
@@ -42,14 +52,19 @@ const Chat = () => {
 
         if(!message) return;
 
-        socket.emit('sendMessage', {})
+        socket.emit('sendMessage', {message, params});
+
+        setMessage('');
     }
 
     return (
 <div className={styles.wrap}>
       <div className={styles.header}>
         <div className={styles.title}>{params.room}</div>
-        <div className={styles.users}> users in this room</div>
+        <div className={styles.users}>
+            {users < 2 ? 'You are alone in this room' : `${users} users are in this room`}
+        </div>
+        {/* <div className={styles.users}>{users} users in this room </div> */}
         <button className={styles.left} onClick={leftRoom}>
           Left the room
         </button>
